@@ -7,16 +7,7 @@ const { createConversationDialogflow } = require('./dialogflow.js');
 const bots = require('./config/botsConfig.js');
 const sequelize = require('./config/database'); // Import sequelize instance
 
-let watsonSessionCreated = false; // Flag to track if Watson session is created
-
 app.use(express.json());
-
-// app.get('/watsonchat', (req, res) => {
-//     res.sendFile(path.join(__dirname, "UIs", 'watsonchat.html'));
-// });
-
-
-// app.use(express.static(path.join(__dirname, 'UIs')));
 
 app.get('/watsonchat', (req, res) => {
     res.sendFile(path.join(__dirname, 'UIs', 'watsonchat.html'));
@@ -37,20 +28,19 @@ app.get('/api/bot-type', (req, res) => {
     res.json({ bot_type: selectedBot.type });
 });
 
-
 app.post('/api/watson/session', async (req, res) => {
+    const botId = req.header('bot_id');
     try {
-        const sessionId = await createSessionWatson();
+        const sessionId = await createSessionWatson(botId);
         res.json({ session_id: sessionId });
     } catch (error) {
         res.status(500).json({ error: 'Error creating Watson session' });
     }
 });
 
-
 app.post('/api/message', async (req, res) => {
     const botId = req.header('bot_id');
-    const sessionId = req.header('session_id'); // Get session_id from request header
+    const sessionId = req.header('session_id'); 
     const selectedBot = bots.find(bot => bot.id == botId);
 
     if (!selectedBot) {
@@ -60,7 +50,7 @@ app.post('/api/message', async (req, res) => {
     switch (selectedBot.type) {
         case 'watson':
             try {
-                await createConversationWatson(req, res, sessionId); // Pass session_id to Watson conversation function
+                await createConversationWatson(req, res, sessionId); 
             } catch (error) {
                 res.status(500).json({ error: 'Error handling Watson conversation' });
             }

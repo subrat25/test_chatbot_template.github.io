@@ -1,22 +1,23 @@
 const dialogflow = require('@google-cloud/dialogflow').v2beta1;
 const { v4: uuidv4 } = require('uuid');
 const bots = require('./config/botsConfig');
-const path = require('path');
-const Conversation = require('./models/conversation'); // Import the Conversation model
+const Conversation = require('./models/conversation'); 
 
-const selectedBot = bots.find(bot => bot.id === 2); // Adjust this as needed
+async function initializeDialogflow(botId) {
+    const selectedBot = bots.find(bot => bot.id == botId);
+    if (!selectedBot || selectedBot.type !== 'dialogflow') {
+        throw new Error('Invalid or unsupported bot ID');
+    }
 
-let sessionClient;
-let sessionPath;
-
-if (selectedBot && selectedBot.type === 'dialogflow') {
     const credentialsPath = selectedBot.google_application_credentials;
     process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
-    sessionClient = new dialogflow.SessionsClient();
-    sessionPath = sessionClient.projectAgentSessionPath(selectedBot.project_id, uuidv4());
+    const sessionClient = new dialogflow.SessionsClient();
+    const sessionPath = sessionClient.projectAgentSessionPath(selectedBot.project_id, uuidv4());
+
+    return { sessionClient, sessionPath, selectedBot };
 }
 
-async function sendMessageToDialogflow(message) {
+async function sendMessageToDialogflow(message, sessionClient, sessionPath) {
     const request = {
         session: sessionPath,
         queryInput: {
@@ -32,9 +33,11 @@ async function sendMessageToDialogflow(message) {
 }
 
 async function createConversationDialogflow(req, res) {
+    const botId = req.header('bot_id');
     try {
+        const { sessionClient, sessionPath, selectedBot } = await initializeDialogflow(botId);
         const { message, username } = req.body;
-        const response = await sendMessageToDialogflow(message);
+        const response = await sendMessageToDialogflow(message, sessionClient, sessionPath);
         
         await Conversation.create({
             sessionId: sessionPath,

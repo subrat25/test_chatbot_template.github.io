@@ -1,3 +1,4 @@
 node_modules
 creds/credentials.json
 .env
+config/dialogflow-creds-2.json

@@ -15,40 +15,37 @@
             height: 100vh;
             background-color: #f0f0f0;
         }
-       #chat-container {
-    background: white;
-    width: 100%;
-    max-width: 500px;
-    height: 80vh;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    border-radius: 20px;
-    display: flex;
-    flex-direction: column;
-    position: fixed; 
-    right: 20px; 
-    bottom: 20px;
-    overflow: hidden;
-    transition: height 0.3s ease, width 0.3s ease, border-radius 0.3s ease;
-}
-#chat-container.collapsed {
-    height: 60px; 
-    width: 80px;
-    border-radius: 30px;
-    position: fixed;
-}
-#chat-container.collapsed::after {
-    content: '';
-    position: absolute;
-    width: 0;
-    height: 0;
-    border-left: 10px solid transparent;
-    border-right: 10px solid transparent;
-    border-top: 10px solid white; 
-    right: 20px;
-    bottom: -10px; 
-}
-
-        
+        #chat-container {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            height: 80vh;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            position: fixed; 
+            right: 20px; 
+            bottom: 20px;
+            overflow: hidden;
+            transition: height 0.3s ease, width 0.3s ease, border-radius 0.3s ease;
+        }
+        #chat-container.collapsed {
+            height: 60px; 
+            width: 80px;
+            border-radius: 30px;
+        }
+        #chat-container.collapsed::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 10px solid white; 
+            right: 20px;
+            bottom: -10px; 
+        }
         #header {
             padding: 5px;
             background: #007bff;
@@ -142,24 +139,15 @@
     <script>
         let chatboxExpanded = false;
         let sessionId = null;
-        const botId = 2; // Adjust bot_id as needed
+        const botId = 2;
 
         document.addEventListener("DOMContentLoaded", async () => {
             const botType = await fetchBotType();
             if (botType === 'watson') {
                 sessionId = await createWatsonSession();
             }
-
-            // Set the initial state of the header text
-            const headerTextExpanded = document.getElementById('header-text-expanded');
-            const headerTextCollapsed = document.getElementById('header-text-collapsed');
-            if (chatboxExpanded) {
-                headerTextExpanded.style.display = 'block';
-                headerTextCollapsed.style.display = 'none';
-            } else {
-                headerTextExpanded.style.display = 'none';
-                headerTextCollapsed.style.display = 'block';
-            }
+            
+            setHeaderState();
         });
 
         async function fetchBotType() {
@@ -175,37 +163,43 @@
 
         async function createWatsonSession() {
             const response = await fetch('/api/watson/session', {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'bot_id': botId
+                }
             });
             const data = await response.json();
             return data.session_id;
         }
 
         function toggleChatbox() {
+            chatboxExpanded = !chatboxExpanded;
+            setHeaderState();
             const chatContainer = document.getElementById('chat-container');
             const messages = document.getElementById('messages');
             const inputContainer = document.getElementById('input-container');
-            const headerTextExpanded = document.getElementById('header-text-expanded');
-            const headerTextCollapsed = document.getElementById('header-text-collapsed');
-
-            chatboxExpanded = !chatboxExpanded;
 
             if (chatboxExpanded) {
                 chatContainer.classList.remove('collapsed');
                 messages.style.display = 'block';
                 inputContainer.style.display = 'flex';
-                headerTextExpanded.style.display = 'block';
-                headerTextCollapsed.style.display = 'none';
-                headerTextExpanded.textContent = 'Google Dialogflow Chat';
-                headerTextExpanded.classList.remove('header-collapsed');
             } else {
                 chatContainer.classList.add('collapsed');
                 messages.style.display = 'none';
                 inputContainer.style.display = 'none';
+            }
+        }
+
+        function setHeaderState() {
+            const headerTextExpanded = document.getElementById('header-text-expanded');
+            const headerTextCollapsed = document.getElementById('header-text-collapsed');
+
+            if (chatboxExpanded) {
+                headerTextExpanded.style.display = 'block';
+                headerTextCollapsed.style.display = 'none';
+            } else {
                 headerTextExpanded.style.display = 'none';
                 headerTextCollapsed.style.display = 'block';
-                headerTextCollapsed.textContent = 'Click here to Chat';
-                headerTextCollapsed.classList.add('header-collapsed');
             }
         }
 
@@ -222,7 +216,7 @@
                 headers: {
                     'Content-Type': 'application/json',
                     'bot_id': botId,
-                    'session_id': sessionId 
+                    'session_id': sessionId
                 },
                 body: JSON.stringify({ message })
             });

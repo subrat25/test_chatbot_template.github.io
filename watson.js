@@ -1,45 +1,28 @@
 const AssistantV2 = require('ibm-watson/assistant/v2');
 const { IamAuthenticator } = require('ibm-watson/auth');
 const bots = require('./config/botsConfig');
-const Conversation = require('./models/conversation'); // Import the Conversation model
+const Conversation = require('./models/conversation'); 
 
-let assistant;
-let session_id;
+async function createSessionWatson(botId) {
+    const selectedBot = bots.find(bot => bot.id == botId);
+    if (!selectedBot || selectedBot.type !== 'watson') {
+        throw new Error('Invalid or unsupported bot ID');
+    }
 
-const selectedBot = bots.find(bot => bot.id === 1); // Adjust this as needed
-
-if (selectedBot && selectedBot.type === 'watson') {
-    process.env.watson_api_key = selectedBot.watson_api_key;
-    process.env.watson_assistant_id = selectedBot.watson_assistant_id;
-    process.env.watson_service_url = selectedBot.watson_service_url;
-    process.env.watson_version = selectedBot.watson_version;
-
-    const api_key = process.env.watson_api_key;
-    const assistant_id = process.env.watson_assistant_id;
-    const service_url = process.env.watson_service_url;
-    const version = process.env.watson_version;
-
-    const authenticator = new IamAuthenticator({ apikey: api_key });
-    assistant = new AssistantV2({
-        version: version,
-        authenticator: authenticator,
-        serviceUrl: service_url,
+    const assistant = new AssistantV2({
+        version: selectedBot.watson_version,
+        authenticator: new IamAuthenticator({ apikey: selectedBot.watson_api_key }),
+        serviceUrl: selectedBot.watson_service_url,
     });
-}
 
-async function createSessionWatson() {
     try {
-        const session = await assistant.createSession({ assistantId: process.env.watson_assistant_id });
-        session_id = session.result.session_id;
-        console.log(`Session ID: ${session_id}`);
-        return session_id;
+        const session = await assistant.createSession({ assistantId: selectedBot.watson_assistant_id });
+        return session.result.session_id;
     } catch (error) {
         console.error('Error creating session:', error);
         throw error;
     }
 }
-
-
 
 function processResponse(response) {
     let message = "";
@@ -57,10 +40,22 @@ function processResponse(response) {
 
     return message.trim();
 }
-async function sendMessage(message, sessionId) {
+
+async function sendMessage(message, sessionId, botId) {
+    const selectedBot = bots.find(bot => bot.id == botId);
+    if (!selectedBot || selectedBot.type !== 'watson') {
+        throw new Error('Invalid or unsupported bot ID');
+    }
+
+    const assistant = new AssistantV2({
+        version: selectedBot.watson_version,
+        authenticator: new IamAuthenticator({ apikey: selectedBot.watson_api_key }),
+        serviceUrl: selectedBot.watson_service_url,
+    });
+
     try {
         const response = await assistant.message({
-            assistantId: process.env.watson_assistant_id,
+            assistantId: selectedBot.watson_assistant_id,
             sessionId: sessionId,
             input: {
                 'message_type': 'text',
@@ -80,9 +75,15 @@ async function sendMessage(message, sessionId) {
 }
 
 async function createConversationWatson(req, res, sessionId) {
+    const botId = req.header('bot_id');
+    const selectedBot = bots.find(bot => bot.id == botId);
+    if (!selectedBot || selectedBot.type !== 'watson') {
+        return res.status(400).json({ error: 'Invalid bot_id' });
+    }
+
     try {
         const { message, username } = req.body;
-        const response = await sendMessage(message, sessionId);
+        const response = await sendMessage(message, sessionId, botId);
         const processedResponse = processResponse(response);
 
         await Conversation.create({
@@ -102,12 +103,6 @@ async function createConversationWatson(req, res, sessionId) {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
-
-module.exports = {
-    createConversationWatson,
-    createSessionWatson,
-};
-
 
 module.exports = {
     createConversationWatson,
