@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watson Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+       #chat-container {
+    background: white;
+    width: 100%;
+    max-width: 500px;
+    height: 80vh;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    position: fixed; 
+    right: 20px; 
+    bottom: 20px;
+    overflow: hidden;
+    transition: height 0.3s ease, width 0.3s ease, border-radius 0.3s ease;
+}
+#chat-container.collapsed {
+    height: 60px; 
+    width: 80px;
+    border-radius: 30px;
+    position: fixed;
+}
+#chat-container.collapsed::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 10px solid white; 
+    right: 20px;
+    bottom: -10px; 
+}
+
+        
+        #header {
+            padding: 5px;
+            background: #007bff;
+            color: white;
+            text-align: center;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            cursor: pointer;
+        }
+        #header h3 {
+            margin: 0;
+            display: none; 
+        }
+        #messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: none;
+        }
+        #input-container {
+            display: flex;
+            padding: 20px;
+            border-top: 1px solid #ddd;
+            display: none;
+        }
+        #input-container input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        #input-container button {
+            padding: 10px 20px;
+            margin-left: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .message {
+            margin-bottom: 10px;
+        }
+        .message.user {
+            text-align: right;
+        }
+        .message.user .text {
+            background: #007bff;
+            color: white;
+            display: inline-block;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .message.bot .text {
+            background: #e0e0e0;
+            display: inline-block;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .message-label {
+            font-size: 0.9em;
+            margin-bottom: 3px;
+        }
+        .message-label.user {
+            text-align: right;
+            color: #007bff;
+        }
+        .message-label.bot {
+            text-align: left;
+            color: #666;
+        }
+        .header-collapsed {
+            padding: 0;
+            vertical-align: top;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container" class="collapsed">
+        <div id="header" onclick="toggleChatbox()">
+            <h3 id="header-text-expanded">Watson Chat</h3>
+            <h7 id="header-text-collapsed">Click here to Chat</h7>
+        </div>
+        <div id="messages"></div>
+        <div id="input-container">
+            <input type="text" id="user-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        let chatboxExpanded = false;
+        let sessionId = null;
+        const botId = 1; // Adjust bot_id as needed
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const botType = await fetchBotType();
+            if (botType === 'watson') {
+                sessionId = await createWatsonSession();
+            }
+
+            // Set the initial state of the header text
+            const headerTextExpanded = document.getElementById('header-text-expanded');
+            const headerTextCollapsed = document.getElementById('header-text-collapsed');
+            if (chatboxExpanded) {
+                headerTextExpanded.style.display = 'block';
+                headerTextCollapsed.style.display = 'none';
+            } else {
+                headerTextExpanded.style.display = 'none';
+                headerTextCollapsed.style.display = 'block';
+            }
+        });
+
+        async function fetchBotType() {
+            const response = await fetch('/api/bot-type', {
+                method: 'GET',
+                headers: {
+                    'bot_id': botId
+                }
+            });
+            const data = await response.json();
+            return data.bot_type;
+        }
+
+        async function createWatsonSession() {
+            const response = await fetch('/api/watson/session', {
+                method: 'POST'
+            });
+            const data = await response.json();
+            return data.session_id;
+        }
+
+        function toggleChatbox() {
+            const chatContainer = document.getElementById('chat-container');
+            const messages = document.getElementById('messages');
+            const inputContainer = document.getElementById('input-container');
+            const headerTextExpanded = document.getElementById('header-text-expanded');
+            const headerTextCollapsed = document.getElementById('header-text-collapsed');
+
+            chatboxExpanded = !chatboxExpanded;
+
+            if (chatboxExpanded) {
+                chatContainer.classList.remove('collapsed');
+                messages.style.display = 'block';
+                inputContainer.style.display = 'flex';
+                headerTextExpanded.style.display = 'block';
+                headerTextCollapsed.style.display = 'none';
+                headerTextExpanded.textContent = 'Watson Chat';
+                headerTextExpanded.classList.remove('header-collapsed');
+            } else {
+                chatContainer.classList.add('collapsed');
+                messages.style.display = 'none';
+                inputContainer.style.display = 'none';
+                headerTextExpanded.style.display = 'none';
+                headerTextCollapsed.style.display = 'block';
+                headerTextCollapsed.textContent = 'Click here to Chat';
+                headerTextCollapsed.classList.add('header-collapsed');
+            }
+        }
+
+        async function sendMessage() {
+            const inputField = document.getElementById('user-input');
+            const message = inputField.value.trim();
+            if (!message) return;
+
+            displayMessage(message, 'user');
+            inputField.value = '';
+
+            const response = await fetch('/api/message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'bot_id': botId,
+                    'session_id': sessionId 
+                },
+                body: JSON.stringify({ message })
+            });
+
+            const data = await response.json();
+            displayMessage(data.response, 'bot');
+        }
+
+        function displayMessage(message, sender) {
+            const messagesContainer = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+
+            const labelDiv = document.createElement('div');
+            labelDiv.classList.add('message-label', sender);
+            labelDiv.textContent = sender === 'user' ? 'You' : 'Watson';
+
+            const textDiv = document.createElement('div');
+            textDiv.classList.add('text');
+            textDiv.textContent = message;
+
+            messageDiv.appendChild(labelDiv);
+            messageDiv.appendChild(textDiv);
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+    </script>
+</body>
+</html>

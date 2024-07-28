@@ -1,0 +1,21 @@
+{
+  "name": "chatbot-integration",
+  "version": "1.0.0",
+  "description": "A project integrating IBM Watson Assistant and Google Dialogflow.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@google-cloud/dialogflow": "^3.0.0",
+    "dotenv": "^8.6.0",
+    "express": "^4.17.1",
+    "ibm-watson": "^6.0.0",
+    "mysql2": "^3.11.0",
+    "pg": "^8.12.0",
+    "sequelize": "^6.37.3",
+    "uuid": "^8.3.2"
+  },
+  "author": "",
+  "license": "ISC"
+}
